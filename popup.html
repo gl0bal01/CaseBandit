@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>CaseBandit</title>
+  <style>
+    body {
+      width: 500px;
+      min-height: 600px;
+      margin: 0;
+      padding: 0;
+      /* --- UPDATED FONT STACK FOR BETTER EMOJI SUPPORT --- */
+      font-family: system-ui, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+      background-color: #1e1e1e;
+      color: #e0e0e0;
+      overflow: hidden;
+    }
+    .container { display: flex; flex-direction: column; height: 100vh; position: relative; }
+    .header { padding: 12px 15px; background-color: #2a2a2a; border-bottom: 1px solid #444; flex-shrink: 0; }
+    .title-bar { display: flex; justify-content: space-between; align-items: center; }
+    .title { font-size: 18px; font-weight: bold; color: #4fc3f7; }
+    .case-selector { margin-top: 10px; display: flex; align-items: center; gap: 10px; }
+    .case-selector select { flex-grow: 1; padding: 6px; background-color: #333; border: 1px solid #555; color: #e0e0e0; border-radius: 4px; }
+    .tabs { display: flex; background-color: #252525; border-bottom: 1px solid #444; flex-shrink: 0; }
+    .tab { flex: 1; padding: 10px; text-align: center; cursor: pointer; transition: background-color 0.2s; }
+    .tab:hover { background-color: #333; }
+    .tab.active { background-color: #1e1e1e; color: #4fc3f7; border-bottom: 2px solid #4fc3f7; }
+    .content { flex-grow: 1; overflow-y: auto; padding: 15px; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; margin-bottom: 5px; font-size: 14px; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; background-color: #333; border: 1px solid #555; color: #e0e0e0; border-radius: 4px; box-sizing: border-box; }
+    .btn { background-color: #4fc3f7; color: #121212; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-right: 10px; transition: background-color 0.2s; }
+    .btn:hover { background-color: #29b6f6; }
+    .btn-secondary { background-color: #555; color: #e0e0e0; }
+    .btn-secondary:hover { background-color: #666; }
+    .btn-danger { background-color: #f44336; }
+    .btn-danger:hover { background-color: #d32f2f; }
+    .btn-small { padding: 4px 8px; font-size: 12px; }
+    .url-item { background-color: #2a2a2a; border-radius: 4px; padding: 15px; margin-bottom: 12px; border-left: 3px solid #555; display: flex; gap: 15px; }
+    .url-item.priority-high { border-left-color: #f44336; }
+    .url-item.priority-medium { border-left-color: #ff9800; }
+    .url-item.priority-low { border-left-color: #4caf50; }
+    .url-item-content { flex-grow: 1; min-width: 0; }
+    .url-item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .url-item-title { font-weight: bold; color: #4fc3f7; word-wrap: break-word; margin-right: 10px; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+    .priority-indicator { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .priority-indicator.high { background-color: #f44336; box-shadow: 0 0 6px #f44336; }
+    .priority-indicator.medium { background-color: #ff9800; box-shadow: 0 0 6px #ff9800; }
+    .priority-indicator.low { background-color: #4caf50; box-shadow: 0 0 6px #4caf50; }
+    .url-item-actions { display: flex; flex-shrink: 0; gap: 8px; }
+    .url-item-action { background: none; border: none; color: #aaa; cursor: pointer; font-size: 18px; padding: 4px; transition: all 0.2s; }
+    .url-item-action:hover { color: #4fc3f7; transform: scale(1.1); }
+    .url-item-url { font-size: 12px; color: #888; margin-bottom: 10px; word-wrap: break-word; }
+    .url-item-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 15px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #333; }
+    .url-item-meta-item { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #aaa; white-space: nowrap; }
+    .url-item-meta-label { color: #666; }
+    .url-item-notes { margin-top: 10px; padding: 8px; background-color: #252525; border-radius: 4px; font-size: 12px; color: #ccc; line-height: 1.4; }
+    .url-item-tags { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 5px; }
+    .url-item-screenshot { flex-shrink: 0; width: 120px; height: 90px; border-radius: 4px; object-fit: cover; cursor: pointer; border: 1px solid #444; transition: transform 0.2s; }
+    .url-item-screenshot:hover { transform: scale(1.05); border-color: #4fc3f7; }
+    .tag { display: inline-block; background-color: #3a3a3a; color: #4fc3f7; padding: 3px 8px; border-radius: 12px; font-size: 11px; border: 1px solid #4fc3f7; }
+    .status-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+    .status-badge.todo { background-color: #2a3a4a; color: #64b5f6; border: 1px solid #1976d2; }
+    .status-badge.in-progress { background-color: #4a3a2a; color: #ffb74d; border: 1px solid #f57c00; }
+    .status-badge.done { background-color: #2a4a3a; color: #81c784; border: 1px solid #388e3c; }
+    .search-box { width: 100%; padding: 8px; background-color: #333; border: 1px solid #555; color: #e0e0e0; border-radius: 4px; margin-bottom: 15px; box-sizing: border-box; }
+    .case-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background-color: #2a2a2a; border-radius: 4px; margin-bottom: 8px; }
+    .case-item.default { border: 1px solid #4fc3f7; }
+    .case-name { font-weight: bold; }
+    .case-actions { display: flex; gap: 5px; }
+    .empty { text-align: center; color: #aaa; padding: 20px; }
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat-card { background-color: #2a2a2a; border-radius: 4px; padding: 15px; text-align: center; }
+    .stat-value { font-size: 24px; font-weight: bold; color: #4fc3f7; }
+    .stat-label { font-size: 12px; color: #aaa; }
+    .settings-group { background-color: #2a2a2a; padding: 15px; border-radius: 4px; margin-bottom: 15px; }
+    .settings-group h3 { margin-top: 0; color: #4fc3f7; }
+    .shortcut-display { font-family: monospace; background-color: #333; padding: 5px 10px; border-radius: 4px; margin-left: 10px; }
+    #screenshot-preview { max-width: 100%; margin-top: 10px; border-radius: 4px; border: 1px solid #555; display: none; }
+    #custom-notification {
+      position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background-color: #4caf50; color: white;
+      padding: 10px 20px; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); z-index: 1000;
+      opacity: 0; transition: opacity 0.3s ease-in-out; pointer-events: none;
+    }
+    #custom-notification.show { opacity: 1; }
+    .filter-chip:hover { background-color: #666 !important; }
+    .filter-chip.active { background-color: #4fc3f7 !important; color: #121212 !important; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="custom-notification"></div>
+    <div class="header">
+      <div class="title-bar"><div class="title">🔍 CaseBandit</div></div>
+      <div class="case-selector">
+        <label for="case-select">📁 Active Case:</label>
+        <select id="case-select"></select>
+        <button id="btn-manage-cases" class="btn btn-secondary btn-small">⚙️ Manage</button>
+      </div>
+    </div>
+    <div class="tabs">
+      <div class="tab active" data-tab="add">➕ Add URL</div>
+      <div class="tab" data-tab="list">📋 URLs</div>
+      <div class="tab" data-tab="stats">📊 Stats</div>
+      <div class="tab" data-tab="settings">⚙️ Settings</div>
+    </div>
+    <div class="content">
+      <div id="tab-add" class="tab-content">
+        <div class="form-group"><label for="url-input">🔗 URL</label><input type="text" id="url-input" placeholder="https://example.com"></div>
+        <div class="form-group"><label for="title-input">📝 Title</label><input type="text" id="title-input" placeholder="Page title"></div>
+        <div class="form-group"><label for="notes-input">📄 Notes</label><textarea id="notes-input" placeholder="Add your notes here..." rows="3"></textarea></div>
+        <div class="form-group"><label for="tags-input">🏷️ Tags (comma separated)</label><input type="text" id="tags-input" placeholder="tag1, tag2, tag3"></div>
+        <div class="form-group"><label for="status-select">🎯 Status</label><select id="status-select"><option value="todo">📋 To Do</option><option value="in-progress">⏳ In Progress</option><option value="done">✅ Done</option></select></div>
+        <div class="form-group"><label for="priority-select">⚡ Priority</label><select id="priority-select"><option value="0">➖ None</option><option value="1">🟢 Low</option><option value="2">🟡 Medium</option><option value="3">🔴 High</option></select></div>
+        <button id="btn-capture-screenshot" class="btn btn-secondary">📸 Capture Screenshot</button>
+        <img id="screenshot-preview" src="" alt="Screenshot Preview">
+        <div style="margin-top: 15px;"><button id="btn-save-url" class="btn">💾 Save URL</button></div>
+      </div>
+      <div id="tab-list" class="tab-content" style="display:none;">
+        <div style="display: flex; gap: 10px; margin-bottom: 10px; align-items: center;">
+          <input type="text" id="search-input" class="search-box" placeholder="🔍 Search URLs..." style="flex-grow: 1; margin-bottom: 0;">
+          <select id="url-list-sort" style="padding: 8px; background-color: #333; border: 1px solid #555; color: #e0e0e0; border-radius: 4px; min-width: 150px;">
+            <option value="lastSeen-desc">🕒 Recently Viewed</option>
+            <option value="created-desc">🆕 Newest First</option>
+            <option value="created-asc">⏳ Oldest First</option>
+            <option value="title-asc">🔤 Title A→Z</option>
+            <option value="title-desc">🔤 Title Z→A</option>
+            <option value="priority-desc">⚡ Priority High→Low</option>
+            <option value="status">🎯 Status</option>
+            <option value="domain">🌐 Domain</option>
+          </select>
+        </div>
+        <div style="display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; align-items: center;">
+          <button class="filter-chip active" data-filter="all" style="background-color: #555; color: #e0e0e0; border: none; padding: 4px 10px; border-radius: 12px; font-size: 11px; cursor: pointer; transition: background-color 0.2s;">📋 All</button>
+          <button class="filter-chip" data-filter="todo" style="background-color: #333; color: #e0e0e0; border: none; padding: 4px 10px; border-radius: 12px; font-size: 11px; cursor: pointer; transition: background-color 0.2s;">📋 To Do</button>
+          <button class="filter-chip" data-filter="in-progress" style="background-color: #333; color: #e0e0e0; border: none; padding: 4px 10px; border-radius: 12px; font-size: 11px; cursor: pointer; transition: background-color 0.2s;">⏳ In Progress</button>
+          <button class="filter-chip" data-filter="done" style="background-color: #333; color: #e0e0e0; border: none; padding: 4px 10px; border-radius: 12px; font-size: 11px; cursor: pointer; transition: background-color 0.2s;">✅ Done</button>
+          <button class="filter-chip" data-filter="high-priority" style="background-color: #333; color: #e0e0e0; border: none; padding: 4px 10px; border-radius: 12px; font-size: 11px; cursor: pointer; transition: background-color 0.2s;">🔴 High Priority</button>
+          <span id="url-count" style="margin-left: auto; font-size: 11px; color: #aaa;"></span>
+        </div>
+        <div id="url-list"></div>
+      </div>
+      <div id="tab-stats" class="tab-content" style="display:none;"><div id="stats-container"></div></div>
+      <div id="tab-settings" class="tab-content" style="display:none;">
+        <div class="settings-group"><h3>⌨️ Quick Save Shortcut</h3><p>Define a custom shortcut to save the current URL instantly.</p><div style="display: flex; align-items: center; margin-top: 10px;"><select id="shortcut-modifier"><option value="ctrl">Ctrl</option><option value="alt">Alt</option><option value="shift">Shift</option><option value="meta">Meta (Cmd)</option></select><span style="margin: 0 10px;">+</span><input type="text" id="shortcut-key" maxlength="1" style="width: 40px; text-align: center;" placeholder="S"><button id="btn-save-shortcut" class="btn btn-secondary btn-small">💾 Save</button></div><p style="margin-top: 10px; font-size: 12px; color: #aaa;">Current: <span id="current-shortcut" class="shortcut-display">Ctrl+<</span></p><p style="font-size: 12px; color: #ff9800;">⚠️ Note: This custom shortcut may conflict with shortcuts built into the websites you visit.</p></div>
+        <div class="settings-group"><h3>🔔 Notifications & Feedback</h3><label for="notification-setting" style="display: flex; align-items: center; cursor: pointer;"><input type="checkbox" id="notification-setting" style="margin-right: 10px;"><span>Show a notification when using the quick-save shortcut</span></label><label for="audio-feedback-setting" style="display: flex; align-items: center; cursor: pointer; margin-top: 10px;"><input type="checkbox" id="audio-feedback-setting" style="margin-right: 10px;"><span>🔊 Play sound when URL is saved</span></label><p style="font-size: 12px; color: #aaa; margin-top: 10px;">💡 Tip: The extension icon will show a green ✓ badge for 2 seconds when a URL is saved successfully, or a red ! if there's an error.</p></div>
+        <div class="settings-group"><h3>📸 Screenshot Settings</h3><label for="auto-capture-screenshot" style="display: flex; align-items: center; cursor: pointer;"><input type="checkbox" id="auto-capture-screenshot" style="margin-right: 10px;"><span>Automatically capture a screenshot when saving a URL</span></label></div>
+        <div class="settings-group"><h3>📁 Case Management</h3><button id="btn-create-case" class="btn btn-secondary">➕ Create New Case</button><h4 style="margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid #444; padding-bottom: 5px;">📂 Your Cases</h4><div id="case-management-list"></div></div>
+        <div class="settings-group"><h3>💾 Data Management</h3>
+        <button id="btn-export-json" class="btn btn-secondary">📤 Export JSON</button>
+        <button id="btn-export-csv" class="btn btn-secondary">📊 Export CSV</button>
+        <input type="file" id="import-data-file" accept=".json" style="display:none;">
+        <button id="btn-import-data" class="btn btn-secondary">📥 Import</button>
+      </div>
+      <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #444; text-align: center;">
+        <p style="font-size: 12px; color: #aaa; margin-bottom: 10px;">Made with 💙 for investigators</p>
+        <p style="font-size: 13px; color: #4fc3f7;">
+          <a href="https://github.com/gl0bal01" target="_blank" style="color: #4fc3f7; text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='#29b6f6'" onmouseout="this.style.color='#4fc3f7'">
+            🐙 Created by gl0bal01
+          </a>
+        </p>
+        <p style="font-size: 11px; color: #777; margin-top: 5px;">CaseBandit v2.5</p>
+      </div>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
